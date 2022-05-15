@@ -1,0 +1,50 @@
+@echo off
+echo ----------------------------------------
+SETLOCAL enabledelayedexpansion
+chcp 65001>nul
+REM === 文字コードをUTFに設定。
+pushd %~dp0
+REM ↑このバッチのディレクトリをセット（以下のディレクトリのファイルを使用可能）
+
+REM === ドラッグファイル名でフォルダー作成
+
+  for %%a in (%*) do (
+  set folder=%%~na
+  set folder=!folder:~0,14!
+  if not exist "!folder!" (
+	  md "%~dp0\!folder!"
+	  )
+)
+
+REM === 動画デュレーションを取得
+
+  for %%F in (%*) do (
+      for /f "tokens=2-5 delims=:., " %%a in (
+      	'ffmpeg -i "%%F" 2^>^&1 ^| find "Duration:"'
+      	) do (
+            set /a "duration=1%%a*3600 + 1%%b*60 + 1%%c - 366100"
+            )
+	set /a sec=420           
+	set /a times=!duration!/!sec!
+	set /a reminder=!duration!%%!sec!
+	if !reminder! gtr 0 (
+				set /a Part=!times!+1
+				) else (
+				set /a Part=!times!
+				)
+	echo Split Video into: !Part! parts
+
+REM === 動画をfor処理          
+
+ 	for /l %%b in (0,1,!times!) do (
+		set /a min=7*%%b
+		set /a num=%%b+1
+		"ffmpeg" -y -i "%%F" -vcodec copy -ss 00:!min!:00.00 -t 00:07:00.00 "%~dp0\!folder!\video0!num!.mp4"
+		)
+)
+echo ----------------------------------------
+echo Output Folder: !folder!
+echo Video Duration: !duration! seconds
+echo Splitted Video into: !Part! parts
+echo ----------------------------------------
+pause>nul
